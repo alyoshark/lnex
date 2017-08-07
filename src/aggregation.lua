@@ -2,7 +2,7 @@ local M = {}
 
 local function distinctable(func, col, dist)
     local content = dist and 'DISTINCT ' .. col or col
-    return func .. '(' .. content .. ')'
+    return ('%s(%s)'):format(func, content)
 end
 
 function M.max(col, dist) return distinctable('MAX', col, dist) end

@@ -5,7 +5,11 @@ local function expand_clause(self, clause, vals)
     if not self[clause] then self[clause] = {} end
     local arr = self[clause]
     for _, v in ipairs(vals) do
-        table.insert(arr, v)
+        if clause == 'predicates' then
+            table.insert(arr, tostring(v))
+        else
+            table.insert(arr, v)
+        end
     end
     return self
 end
@@ -25,17 +29,17 @@ end
 function lnex:compile()
     local cols, froms, preds = 'SELECT *', '', ''
     if self.columns then
-        cols = 'SELECT ' .. table.concat(self.columns, ',')
+        cols = 'SELECT ' .. table.concat(self.columns, ', ')
     end
     if self.tables then
-        froms = 'FROM ' .. table.concat(self.tables, ',')
+        froms = 'FROM ' .. table.concat(self.tables, ', ')
     end
     if self.predicates then
-        preds = 'WHERE ' .. table.concat(self.predicates, ',')
+        preds = 'WHERE ' .. table.concat(self.predicates, ' AND ')
     end
     return table.concat({ cols, froms, preds }, ' ')
 end
-lnex.__call = lnex.compile
+lnex.__tostring = lnex.compile
 
 function lnex:new(dialect)
     return setmetatable({
