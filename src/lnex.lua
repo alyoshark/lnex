@@ -1,3 +1,6 @@
+local new_tab = require('table.new')
+local clr_tab = require('table.clear')
+
 local lnex = {}
 lnex.__index = lnex
 
@@ -19,38 +22,40 @@ function lnex:from(tabs)
     return expand_clause(self, 'tables', tabs)
 end
 
-function lnex:where(preds)
-    return expand_clause(self, 'predicates', preds)
+local function _conjunct(self, clause, preds)
+    return expand_clause(self, clause, preds)
 end
 
-function lnex:orWhere(preds)
+local function _disjunct(self, clause, preds)
     local predicate
     for i, p in ipairs(preds) do
-        if i == 1 then predicate = v
+        if i == 1 then predicate = p
         else predicate = predicate + p end
     end
-    if not self.predicates then
-        self.predicates = { predicate }
+    if not self[clause] then
+        self[clause] = { predicate }
     else
-        local l = #self.predicates
-        local p = self.predicates[l]
-        p = p + predicate
+        local l = #self[clause]
+        local p = self[clause][l]
+        self[clause][l] = ('%s OR %s'):format(p, predicate)
     end
     return self
 end
 
-function lnex:__tostring()
-    local cols, froms, preds = 'SELECT *', nil, nil
-    if self.columns then
-        cols = 'SELECT ' .. table.concat(self.columns, ', ')
-    end
-    if self.tables then
-        froms = 'FROM ' .. table.concat(self.tables, ', ')
-    end
-    if self.predicates then
-        preds = 'WHERE ' .. table.concat(self.predicates, ' AND ')
-    end
-    return table.concat({ cols, froms, preds }, ' ')
+function lnex:where(preds)
+    return _conjunct(self, 'wheres', preds)
+end
+
+function lnex:orwhere(preds)
+    return _disjunct(self, 'wheres', preds)
+end
+
+function lnex:having(preds)
+    return _conjunct(self, 'havings', preds)
+end
+
+function lnex:orhaving(preds)
+    return _disjunct(self, 'havings', preds)
 end
 
 function lnex:new(dialect)
@@ -58,8 +63,38 @@ function lnex:new(dialect)
         dialect = dialect,
         columns = nil,
         tables = nil,
-        predicates = nil,
+        wheres = nil,
+        groups = nil,
+        havings = nil,
     }, lnex)
+end
+
+function lnex:__tostring()
+    local cols, froms, wheres, groups, havings = 'SELECT *'
+    local struct = new_tab(5, 0)
+    if self.columns then
+        cols = 'SELECT ' .. table.concat(self.columns, ', ')
+        table.insert(struct, cols)
+    end
+    if self.tables then
+        froms = 'FROM ' .. table.concat(self.tables, ', ')
+        table.insert(struct, frome)
+    end
+    if self.wheres then
+        wheres = 'WHERE ' .. table.concat(self.wheres, ' AND ')
+        table.insert(struct, wheres)
+    end
+    if self.groups then
+        groups = 'GROUP BY ' .. table.concat(self.groups, ' AND ')
+        table.insert(struct, groups)
+    end
+    if self.havings then
+        havings = 'HAVING ' .. table.concat(self.havings, ' AND ')
+        table.insert(struct, havings)
+    end
+    local result = table.concat(struct, ' ')
+    clr_tab(struct)
+    return result
 end
 
 return lnex

@@ -40,6 +40,10 @@ print('\n-- disjunction:')
 q = lnex:new('mysql'):select({c, 'title', 'year'}):from({t, 'books'})
 print(q:where({p1 + p2}))
 
+print('\n-- orwhere:')
+q = lnex:new('mysql'):select({c, 'title', 'year'}):from({t, 'books'}):where({p1})
+print(q:orwhere({p2}))
+
 print('\n-- by specification:')
 q = lnex:new('mysql'):select({c, 'title', 'year'}):from({t, 'books'})
 local p = pred.spec({ title = 'startup', year = 1998 })
@@ -62,7 +66,10 @@ print(q:where({p}))
 
 print('\n-- where in query:')
 q = lnex:new('mysql'):select({c, 'title', 'year'}):from({t, 'books'})
-        :where(p)
 p = pred.withinq(c, lnex:new('mysql'):select({'year'}):from({'books'}))
 print(p)
 print(q:where({p}))
+
+print('\n-- having:')
+q = lnex:new('mysql'):select({c, 'title', 'year'}):from({t, 'books'}):having({p1})
+print(q)
