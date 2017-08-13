@@ -4,7 +4,7 @@ local pred = {}
 setmetatable(pred, pred)
 
 local function _create(col, op, val, conf)
-    if type(col) ~= 'string' then col = col.name end
+    if col.name then col = col.name end
     local fmt, result = '%s %s %s', ''
     if not conf then
         result = fmt:format(col, op, val)
@@ -49,7 +49,17 @@ function pred:__call(col, op, val)
     return _create(col, op, val, conf)
 end
 
-function pred.spec(spec)
+function pred.lspec(spec)
+    local predicate
+    for _, v in ipairs(spec) do
+        local p = _create(v.col, '=', v.val)
+        if not predicate then predicate = p
+        else predicate = predicate * p end
+    end
+    return predicate
+end
+
+function pred.tspec(spec)
     local predicate
     for k, v in pairs(spec) do
         local p = _create(k, '=', v)

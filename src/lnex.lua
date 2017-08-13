@@ -4,26 +4,33 @@ local clr_tab = require('table.clear')
 local lnex = {}
 lnex.__index = lnex
 
-local function expand_clause(self, clause, vals)
-    if not self[clause] then self[clause] = {} end
+local function _expand(self, clause, vals)
+    if not self[clause] then
+        local len = #vals
+        self[clause] = new_tab(len, 0)
+    end
     local arr = self[clause]
-    for _, v in ipairs(vals) do
-        if type(v) == 'string' then table.insert(arr, v)
+    for _, v in ipairs(vals) do  -- clause check is so dirty QAQ
+        if clause == 'groups' then table.insert(arr, v.name)
         else table.insert(arr, tostring(v)) end
     end
     return self
 end
 
-function lnex:select(cols)
-    return expand_clause(self, 'columns', cols)
+function lnex:select(selects)
+    return _expand(self, 'selects', selects)
 end
 
-function lnex:from(tabs)
-    return expand_clause(self, 'tables', tabs)
+function lnex:from(froms)
+    return _expand(self, 'froms', froms)
+end
+
+function lnex:groupby(groups)
+    return _expand(self, 'groups', groups)
 end
 
 local function _conjunct(self, clause, preds)
-    return expand_clause(self, clause, preds)
+    return _expand(self, clause, preds)
 end
 
 local function _disjunct(self, clause, preds)
@@ -61,40 +68,37 @@ end
 function lnex:new(dialect)
     return setmetatable({
         dialect = dialect,
-        columns = nil,
-        tables = nil,
+        selects = nil,
+        froms = nil,
         wheres = nil,
         groups = nil,
         havings = nil,
     }, lnex)
 end
 
-function lnex:__tostring()
-    local cols, froms, wheres, groups, havings = 'SELECT *'
+local function _clause(clause, attrs, struct, sep, preserve)
+    clause = clause .. ' ' .. table.concat(attrs, sep)
+    table.insert(struct, clause)
+    if not preserve then clr_tab(attrs) end
+end
+
+local function _compile(self, preserve)
+    local selects, froms, wheres, groups, havings = 'SELECT *'
     local struct = new_tab(5, 0)
-    if self.columns then
-        cols = 'SELECT ' .. table.concat(self.columns, ', ')
-        table.insert(struct, cols)
-    end
-    if self.tables then
-        froms = 'FROM ' .. table.concat(self.tables, ', ')
-        table.insert(struct, frome)
-    end
-    if self.wheres then
-        wheres = 'WHERE ' .. table.concat(self.wheres, ' AND ')
-        table.insert(struct, wheres)
-    end
-    if self.groups then
-        groups = 'GROUP BY ' .. table.concat(self.groups, ' AND ')
-        table.insert(struct, groups)
-    end
-    if self.havings then
-        havings = 'HAVING ' .. table.concat(self.havings, ' AND ')
-        table.insert(struct, havings)
-    end
+    if self.selects then _clause('SELECT', self.selects, struct, ', ', preserve) end
+    if self.froms then _clause('FROM', self.froms, struct, ', ', preserve) end
+    if self.wheres then _clause('WHERE', self.wheres, struct, ' AND ', preserve) end
+    if self.groups then _clause('GROUP BY', self.groups, struct, ', ', preserve) end
+    if self.havings then _clause('HAVING', self.havings, struct, ' AND ', preserve) end
     local result = table.concat(struct, ' ')
-    clr_tab(struct)
+    if not preserve then clr_tab(struct) end
     return result
 end
+
+function lnex:debug()
+    return _compile(self, true)
+end
+
+lnex.__tostring = _compile
 
 return lnex
